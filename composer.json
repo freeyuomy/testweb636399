@@ -1,0 +1,13 @@
+{
+    "name": "websocket-demo",
+    "description": "PHP WebSocket Server Demo with MySQL",
+    "require": {
+        "cboden/ratchet": "^0.4.4",
+        "react/mysql": "^0.5.7"
+    },
+    "autoload": {
+        "psr-4": {
+            "MyApp\\": "src/"
+        }
+    }
+} 

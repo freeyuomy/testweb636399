@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chat Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #messages {
+            height: 300px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            overflow-y: scroll;
+            margin-bottom: 10px;
+        }
+        #messageForm {
+            display: flex;
+        }
+        #messageInput {
+            flex-grow: 1;
+            padding: 8px;
+            margin-right: 10px;
+        }
+        .status {
+            color: #888;
+            font-style: italic;
+        }
+        .message {
+            margin-bottom: 5px;
+        }
+        .client-id {
+            font-weight: bold;
+            color: #0066cc;
+        }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Chat Demo</h1>
+    <div id="connection-status">Status: Disconnected</div>
+    <div id="messages"></div>
+    <form id="messageForm">
+        <input type="text" id="messageInput" placeholder="Type a message..." autocomplete="off">
+        <button type="submit">Send</button>
+    </form>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const messagesDiv = document.getElementById('messages');
+            const messageForm = document.getElementById('messageForm');
+            const messageInput = document.getElementById('messageInput');
+            const connectionStatus = document.getElementById('connection-status');
+            
+            // Create WebSocket connection
+            // Use relative path for WebSocket connection through Nginx proxy
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+            const socket = new WebSocket(wsUrl);
+            
+            // Connection opened
+            socket.addEventListener('open', function(event) {
+                connectionStatus.textContent = 'Status: Connected';
+                addMessage('Connected to the server', 'status');
+            });
+            
+            // Listen for messages
+            socket.addEventListener('message', function(event) {
+                const data = JSON.parse(event.data);
+                
+                switch(data.type) {
+                    case 'user_connected':
+                        addMessage(`Client ${data.client_id} connected`, 'status');
+                        break;
+                    case 'user_disconnected':
+                        addMessage(`Client ${data.client_id} disconnected`, 'status');
+                        break;
+                    case 'message':
+                        addMessage(`<span class="client-id">Client ${data.client_id}:</span> ${data.message}`);
+                        break;
+                    default:
+                        addMessage('Received: ' + event.data);
+                }
+            });
+            
+            // Connection closed
+            socket.addEventListener('close', function(event) {
+                connectionStatus.textContent = 'Status: Disconnected';
+                addMessage('Disconnected from the server', 'status');
+            });
+            
+            // Connection error
+            socket.addEventListener('error', function(event) {
+                connectionStatus.textContent = 'Status: Error';
+                addMessage('WebSocket error', 'status');
+            });
+            
+            // Send message
+            messageForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                if (messageInput.value.trim() && socket.readyState === WebSocket.OPEN) {
+                    const message = {
+                        message: messageInput.value
+                    };
+                    
+                    socket.send(JSON.stringify(message));
+                    messageInput.value = '';
+                }
+            });
+            
+            // Helper function to add messages to the chat
+            function addMessage(message, className = 'message') {
+                const messageElement = document.createElement('div');
+                messageElement.className = className;
+                messageElement.innerHTML = message;
+                messagesDiv.appendChild(messageElement);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
+        });
+    </script>
+</body>
+</html> 
